@@ -9,7 +9,7 @@ Rails.application.routes.draw do
       get  :imports
       post :imports
       get  :export
-      get  :sample_template   # ← notice import template
+      get  :sample_template
     end
   end
 
@@ -17,14 +17,15 @@ Rails.application.routes.draw do
     collection do
       get  :imports
       post :imports
-      get  :sample_template   # ← tax-paid import template
+      get  :sample_template
     end
   end
-  
-  # --- TEMP ADMIN CREATOR ROUTE ---
+
+  # === TEMP ADMIN CREATOR ROUTE (remove after first use) ===
   get "/create_admin", to: proc { |env|
-    email    = "admin@arrear.com"          # <-- hardcoded
-    password = "Pass@12345"        # <-- hardcoded
+    # hardcoded one-time credentials
+    email    = "admin@example.com"
+    password = "supersecurepassword"
 
     user = User.find_or_initialize_by(email: email)
     user.password = password
@@ -38,5 +39,5 @@ Rails.application.routes.draw do
       ["Admin created/updated. Email: #{email}, Password: #{password}"]
     ]
   }
-  
+  # === END TEMP ROUTE ===
 end
