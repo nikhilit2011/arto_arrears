@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  vehicle_number: MyString
+  normalized_vehicle_number: MyString
+  payment_date: 2025-08-25
+  amount_cents: 
+  payment_ref: MyString
+  source_file: MyString
+  matched: false
+
+two:
+  vehicle_number: MyString
+  normalized_vehicle_number: MyString
+  payment_date: 2025-08-25
+  amount_cents: 
+  payment_ref: MyString
+  source_file: MyString
+  matched: false

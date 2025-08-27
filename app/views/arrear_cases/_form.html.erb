@@ -1,0 +1,37 @@
+<%= form_with(model: @arrear_case, local: true) do |f| %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <%= f.label :vehicle_number, class: "block text-gray-700" %>
+      <%= f.text_field :vehicle_number, class: "mt-1 block w-full border rounded px-3 py-2" %>
+    </div>
+
+    <div>
+      <%= f.label :vehicle_type, class: "block text-gray-700" %>
+      <%= f.text_field :vehicle_type, class: "mt-1 block w-full border rounded px-3 py-2" %>
+    </div>
+
+    <div>
+      <%= f.label :tax_arrear_from, class: "block text-gray-700" %>
+      <%= f.date_field :tax_arrear_from, class: "mt-1 block w-full border rounded px-3 py-2" %>
+    </div>
+
+    <div>
+      <%= f.label :first_notice_date, class: "block text-gray-700" %>
+      <%= f.date_field :first_notice_date, class: "mt-1 block w-full border rounded px-3 py-2" %>
+    </div>
+
+    <div>
+      <%= f.label :tax_paid_status, class: "block text-gray-700" %>
+      <%= f.select :tax_paid_status, ArrearCase.tax_paid_statuses.keys.map { |k| [k.titleize, k] }, {}, class: "mt-1 block w-full border rounded px-3 py-2" %>
+    </div>
+
+    <div>
+      <%= f.label :remarks, class: "block text-gray-700" %>
+      <%= f.text_area :remarks, class: "mt-1 block w-full border rounded px-3 py-2" %>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <%= f.submit class: "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" %>
+  </div>
+<% end %>

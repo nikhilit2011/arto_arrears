@@ -1,0 +1,17 @@
+<div class="max-w-xl mx-auto mt-10 bg-white shadow rounded p-6">
+  <h1 class="text-2xl font-bold mb-4">Import Tax Paid Excel</h1>
+  <%= form_with url: imports_tax_payments_path, method: :post, multipart: true, class: "space-y-4" do %>
+    <div>
+      <label class="block mb-1">Excel File (.xlsx/.xls)</label>
+      <%= file_field_tag :file, accept: ".xlsx,.xls", class: "border rounded px-3 py-2 w-full" %>
+    </div>
+    <div class="flex gap-2">
+      <%= submit_tag "Upload & Reconcile", class: "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"  %>
+      <%= link_to "Back", tax_payments_path, class: "px-4 py-2 rounded border" %>
+    </div>
+  <% end %>
+  <p class="text-sm text-gray-500 mt-3">
+    We recognize headers like: <em>Receipt Date, Registration No., Receipt No., Total in (Rs.)</em>.
+    If Total is absent, we compute from Tax/Interest/Surcharge/Penalty minus Exempted/Rebate.
+  </p>
+</div>

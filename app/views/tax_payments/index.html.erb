@@ -1,0 +1,45 @@
+<div class="max-w-7xl mx-auto mt-8 p-6 bg-white shadow rounded">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold">Tax Payments</h1>
+    <%= link_to "Import Excel", imports_tax_payments_path, class: "px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" %>
+  </div>
+
+  <div class="mb-4">
+    <%= search_form_for @q, url: tax_payments_path, method: :get, class: "flex flex-wrap gap-3 items-center" do |f| %>
+      <%= f.text_field :vehicle_number_cont, placeholder: "Vehicle No", class: "border rounded px-3 py-2" %>
+      <%= f.select :matched_eq, [["Any",""],["Matched","true"],["Unmatched","false"]], {}, class: "border rounded px-3 py-2" %>
+      <%= f.submit "Search", class: "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" %>
+    <% end %>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full border">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="p-2 border text-left">Vehicle No</th>
+          <th class="p-2 border text-left">Receipt Date</th>
+          <th class="p-2 border text-right">Amount (₹)</th>
+          <th class="p-2 border text-left">Receipt No.</th>
+          <th class="p-2 border text-left">Matched?</th>
+          <th class="p-2 border text-left">File</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @tax_payments.each do |tp| %>
+          <tr class="border-t">
+            <td class="p-2 border"><%= tp.vehicle_number %></td>
+            <td class="p-2 border"><%= tp.payment_date %></td>
+            <td class="p-2 border text-right"><%= (tp.amount_cents.to_i / 100.0) %></td>
+            <td class="p-2 border"><%= tp.payment_ref %></td>
+            <td class="p-2 border"><%= tp.matched ? "Yes" : "No" %></td>
+            <td class="p-2 border"><%= tp.source_file %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4 flex justify-center">
+    <%= paginate @tax_payments %>
+  </div>
+</div>

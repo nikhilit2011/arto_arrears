@@ -1,0 +1,43 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  vehicle_number: MyString
+  normalized_vehicle_number: MyString
+  vehicle_type: MyString
+  tax_arrear_from: 2025-08-23
+  first_notice_date: 2025-08-23
+  first_notice_tax_cents: 
+  first_notice_penalty_cents: 
+  first_notice_total_cents: 
+  second_notice_date: 2025-08-23
+  second_notice_tax_cents: 
+  second_notice_penalty_cents: 
+  second_notice_total_cents: 
+  recovery_challan_date: 2025-08-23
+  recovery_challan_tax_cents: 
+  recovery_challan_penalty_cents: 
+  tax_paid_status: false
+  tax_paid_date: 2025-08-23
+  tax_paid_amount_cents: 
+  remarks: MyText
+
+two:
+  vehicle_number: MyString
+  normalized_vehicle_number: MyString
+  vehicle_type: MyString
+  tax_arrear_from: 2025-08-23
+  first_notice_date: 2025-08-23
+  first_notice_tax_cents: 
+  first_notice_penalty_cents: 
+  first_notice_total_cents: 
+  second_notice_date: 2025-08-23
+  second_notice_tax_cents: 
+  second_notice_penalty_cents: 
+  second_notice_total_cents: 
+  recovery_challan_date: 2025-08-23
+  recovery_challan_tax_cents: 
+  recovery_challan_penalty_cents: 
+  tax_paid_status: false
+  tax_paid_date: 2025-08-23
+  tax_paid_amount_cents: 
+  remarks: MyText

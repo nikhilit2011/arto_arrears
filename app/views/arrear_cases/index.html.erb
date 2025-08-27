@@ -1,0 +1,146 @@
+<div class="max-w-7xl mx-auto mt-8 p-6 bg-white shadow rounded">
+  <div class="flex items-start justify-between gap-4">
+    <h1 class="text-3xl font-bold">Notice Database</h1>
+
+    <div class="flex flex-wrap gap-2">
+      <%= link_to "Tax Payments", tax_payments_path, class: "px-4 py-2 rounded border" %>
+      <% if current_user.admin? || current_user.creator? %>
+        <%= link_to "New Notice", new_arrear_case_path, class: "px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white" %>
+        <%= link_to "Import Excel", imports_arrear_cases_path, class: "px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" %>
+        <%= link_to "Export CSV", export_arrear_cases_path, class: "px-4 py-2 rounded border" %>
+        <%= link_to "Notice Template", sample_template_arrear_cases_path(format: :csv), class: "px-4 py-2 rounded border" %>
+        <%= link_to "Tax-Paid Template", sample_template_tax_payments_path(format: :csv), class: "px-4 py-2 rounded border" %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Search Form -->
+  <div class="mt-6 mb-4">
+    <%= search_form_for @q, url: arrear_cases_path, method: :get, class: "flex flex-wrap gap-3 items-center" do |f| %>
+      <div>
+        <%= f.label :vehicle_number_cont, "Vehicle No", class: "sr-only" %>
+        <%= f.text_field :vehicle_number_cont, placeholder: "Vehicle No", class: "border rounded px-3 py-2 w-56" %>
+      </div>
+
+      <div>
+        <%= f.label :tax_paid_status_eq, "Tax Paid Status", class: "sr-only" %>
+        <%= f.select :tax_paid_status_eq, [["Any",""], ["Paid","paid"], ["Unpaid","unpaid"]], {}, class: "border rounded px-3 py-2 w-40" %>
+      </div>
+
+      <div class="flex gap-2">
+        <%= f.submit "Search", class: "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" %>
+        <%= link_to "Reset", arrear_cases_path, class: "px-4 py-2 rounded border" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <div class="flex justify-end mb-2">
+      <button id="toggle-extra" type="button" class="text-sm px-3 py-1 border rounded">
+        Show more columns
+      </button>
+    </div>
+
+    <table class="min-w-full border border-gray-200">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="border px-3 py-2 text-left">Sr No.</th>
+          <th class="border px-3 py-2 text-left">Vehicle No</th>
+          <th class="border px-3 py-2 text-left">Vehicle Type</th>
+          <th class="border px-3 py-2 text-left">First Notice Date</th>
+          <th class="border px-3 py-2 text-left">Tax Paid Status</th>
+
+          <!-- Extra columns (hidden by default) -->
+          <th class="border px-3 py-2 text-left extra-col hidden">Second Notice Date</th>
+          <th class="border px-3 py-2 text-left extra-col hidden">Second Notice Total (₹)</th>
+          <th class="border px-3 py-2 text-left extra-col hidden">Recovery Challan Date</th>
+          <th class="border px-3 py-2 text-left extra-col hidden">Tax Paid Date</th>
+          <th class="border px-3 py-2 text-left extra-col hidden">Tax Paid Amount (₹)</th>
+
+          <th class="border px-3 py-2 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if @arrear_cases.any? %>
+          <% @arrear_cases.each_with_index do |case_record, idx| %>
+            <tr class="hover:bg-gray-50">
+              <td class="border px-3 py-2">
+                <%= @arrear_cases.offset_value + idx + 1 %>
+              </td>
+              <td class="border px-3 py-2"><%= case_record.vehicle_number %></td>
+              <td class="border px-3 py-2"><%= case_record.vehicle_type %></td>
+              <td class="border px-3 py-2"><%= case_record.first_notice_date %></td>
+              <td class="border px-3 py-2">
+                <% if case_record.paid? %>
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">Paid</span>
+                <% else %>
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800">Unpaid</span>
+                <% end %>
+              </td>
+
+              <!-- Extra columns (hidden by default) -->
+              <td class="border px-3 py-2 extra-col hidden"><%= case_record.second_notice_date %></td>
+              <td class="border px-3 py-2 extra-col hidden"><%= (case_record.second_notice_total_cents.to_i / 100.0) if case_record.second_notice_total_cents.present? %></td>
+              <td class="border px-3 py-2 extra-col hidden"><%= case_record.recovery_challan_date %></td>
+              <td class="border px-3 py-2 extra-col hidden"><%= case_record.tax_paid_date %></td>
+              <td class="border px-3 py-2 extra-col hidden"><%= (case_record.tax_paid_amount_cents.to_i / 100.0) if case_record.tax_paid_amount_cents.present? %></td>
+
+              <td class="border px-3 py-2">
+                <div class="flex items-center gap-3">
+                  <%= link_to "View", arrear_case_path(case_record), class: "text-gray-700 hover:underline" %>
+                  <% if current_user.admin? || current_user.creator? %>
+                    <%= link_to "Edit", edit_arrear_case_path(case_record), class: "text-blue-600 hover:underline" %>
+                    <%= link_to "Delete", arrear_case_path(case_record),
+                          data: { turbo_confirm: "Are you sure?" }, method: :delete,
+                          class: "text-red-600 hover:underline" %>
+                  <% else %>
+                    <span class="text-gray-400">No actions</span>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="11" class="border px-3 py-8 text-center text-gray-500">
+              No records found. <%= link_to("Import Excel", imports_arrear_cases_path, class: "underline") if current_user.admin? || current_user.creator? %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="mt-6 flex items-center justify-between text-sm text-gray-600">
+    <div>
+      <% if @arrear_cases.total_count > 0 %>
+        Showing
+        <%= @arrear_cases.offset_value + 1 %>–
+        <%= [@arrear_cases.offset_value + @arrear_cases.length, @arrear_cases.total_count].min %>
+        of <%= @arrear_cases.total_count %>
+      <% end %>
+    </div>
+    <div class="flex justify-center w-full">
+      <%= paginate @arrear_cases %>
+    </div>
+  </div>
+</div>
+
+<!-- Tiny inline JS to toggle extra columns -->
+<script>
+  document.addEventListener("turbo:load", ready);
+  document.addEventListener("DOMContentLoaded", ready);
+
+  function ready() {
+    var btn = document.getElementById("toggle-extra");
+    if (!btn) return;
+    btn.addEventListener("click", function(){
+      document.querySelectorAll(".extra-col").forEach(function(el){
+        el.classList.toggle("hidden");
+      });
+      btn.textContent = btn.textContent.includes("Show") ? "Hide more columns" : "Show more columns";
+    });
+  }
+</script>
