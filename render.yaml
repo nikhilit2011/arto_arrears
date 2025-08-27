@@ -1,4 +1,3 @@
-# render.yaml
 databases:
   - name: arto-arrears-db
     plan: free
@@ -11,10 +10,8 @@ services:
     plan: free
     region: singapore
     buildCommand: bundle install && bundle exec rails assets:precompile
-    # Run migrations before starting Puma (works on Free)
     startCommand: bundle exec rails db:migrate && bundle exec puma -C config/puma.rb
     autoDeploy: true
-
     envVars:
       - key: RAILS_ENV
         value: production
@@ -24,8 +21,6 @@ services:
         value: "true"
       - key: RAILS_SERVE_STATIC_FILES
         value: "true"
-      - key: RAILS_MASTER_KEY
-        fromSecret: rails-master-key   # <-- reference a Secret
       - key: DATABASE_URL
         fromDatabase:
           name: arto-arrears-db
