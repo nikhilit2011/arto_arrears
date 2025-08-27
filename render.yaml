@@ -1,14 +1,14 @@
 # render.yaml
 databases:
   - name: arto-arrears-db
-    plan: free              # use a current plan (not legacy 'starter')
+    plan: free              # free Postgres (1 GB, limited connections)
     region: singapore       # pick closest region to you
 
 services:
   - type: web
     name: arto-arrears
-    runtime: ruby           # modern field (replaces old env:ruby)
-    plan: starter
+    runtime: ruby           # modern field
+    plan: free              # 👈 was 'starter', now free
     region: singapore
     buildCommand: bundle install && bundle exec rails assets:precompile
     preDeployCommand: bundle exec rails db:migrate
