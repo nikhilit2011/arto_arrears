@@ -24,7 +24,13 @@
         <tr>
           <th class="text-left px-3 py-2">#</th>
           <th class="text-left px-3 py-2">Vehicle Number</th>
+		  
           <th class="text-left px-3 py-2">Normalized</th>
+		  
+		  <th class="text-left px-3 py-2">Receipt Date (Earliest)</th>
+		  <th class="text-left px-3 py-2">Receipt No. (Earliest)</th>
+		  <th class="text-left px-3 py-2">Tax Arrear From</th>
+		  
           <th class="text-right px-3 py-2">Arrear Total (₹)</th>
           <th class="text-right px-3 py-2">Total Paid (₹)</th>
           <th class="text-right px-3 py-2">Balance (₹)</th>
@@ -44,6 +50,9 @@
             <td class="px-3 py-2"><%= (@rows.current_page - 1) * @rows.limit_value + idx + 1 %></td>
             <td class="px-3 py-2 font-medium"><%= r.vehicle_number %></td>
             <td class="px-3 py-2"><%= r.normalized_vehicle_number %></td>
+			<td class="px-3 py-2"><%= r.earliest_receipt_date %></td>
+			<td class="px-3 py-2"><%= r.earliest_receipt_ref %></td>
+			<td class="px-3 py-2"><%= r.tax_arrear_from %></td>
             <td class="px-3 py-2 text-right"><%= number_with_precision(r.arrear_total, precision: 2) %></td>
             <td class="px-3 py-2 text-right"><%= number_with_precision(r.total_paid, precision: 2) %></td>
             <td class="px-3 py-2 text-right"><%= number_with_precision(r.balance, precision: 2) %></td>
