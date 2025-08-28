@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       get  :export
       get  :sample_template
       delete :bulk_destroy
+      delete :destroy_all 
     end
   end
 

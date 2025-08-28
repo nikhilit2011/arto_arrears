@@ -43,11 +43,35 @@ class ArrearCasesController < ApplicationController
       render :edit, status: :unprocessable_entity
     end
   end
+  
+  def destroy_all
+    unless current_user&.admin? || current_user&.creator?
+      redirect_to arrear_cases_path, alert: "You are not authorized for this action." and return
+    end
+
+    total = ArrearCase.count
+    # Use delete_all for speed (skips callbacks). Use destroy_all if you need callbacks.
+    ArrearCase.delete_all
+
+    redirect_to arrear_cases_path, notice: "#{total} notice#{'s' unless total == 1} deleted permanently."
+  end
+  
 
   # DELETE /arrear_cases/:id
   def destroy
     @arrear_case.destroy
     redirect_to arrear_cases_path, notice: "Record deleted successfully."
+  end
+
+  # DELETE /arrear_cases/bulk_destroy
+  def bulk_destroy
+    ids = Array(params[:ids] || params[:arrear_case_ids]).map(&:to_i).uniq
+    if ids.empty?
+      redirect_to arrear_cases_path, alert: "No records selected."
+    else
+      destroyed = ArrearCase.where(id: ids).destroy_all.length
+      redirect_to arrear_cases_path, notice: "#{destroyed} record#{'s' unless destroyed == 1} deleted successfully."
+    end
   end
 
   # ========= Imports =========
@@ -97,17 +121,6 @@ class ArrearCasesController < ApplicationController
 
     send_data csv, filename: "arrear_cases-#{Date.today}.csv", type: "text/csv"
   end
-  
-  def bulk_destroy
-      ids = Array(params[:ids] || params[:arrear_case_ids]).map(&:to_i).uniq
-      if ids.empty?
-        redirect_to arrear_cases_path, alert: "No records selected."
-      else
-        destroyed = ArrearCase.where(id: ids).destroy_all.length
-        redirect_to arrear_cases_path,
-          notice: "#{destroyed} record#{'s' unless destroyed == 1} deleted successfully."
-      end
-    end
 
   private
 
@@ -138,7 +151,6 @@ class ArrearCasesController < ApplicationController
     end
     send_data csv, filename: "notice_import_template.csv", type: "text/csv"
   end
-  
 
   # Accept both file param keys: :file (file_field_tag) or nested under :arrear_case[:file]
   def import_file_param

@@ -10,11 +10,18 @@
         <%= link_to "Export CSV", export_arrear_cases_path, class: "px-4 py-2 rounded border" %>
         <%= link_to "Notice Template", sample_template_arrear_cases_path(format: :csv), class: "px-4 py-2 rounded border" %>
         <%= link_to "Tax-Paid Template", sample_template_tax_payments_path(format: :csv), class: "px-4 py-2 rounded border" %>
+
+        <!-- ✅ Delete ALL button -->
+        <%= link_to "Delete ALL",
+                    destroy_all_arrear_cases_path,
+                    data: { turbo_method: :delete,
+                            turbo_confirm: "⚠️ This will permanently delete ALL notices. Are you absolutely sure?" },
+                    class: "px-4 py-2 rounded bg-red-700 hover:bg-red-800 text-white" %>
       <% end %>
     </div>
   </div>
 
-  <!-- Search Form -->
+  <!-- ✅ Your original search bar (unchanged) -->
   <div class="mt-6 mb-4">
     <%= search_form_for @q, url: arrear_cases_path, method: :get, class: "flex flex-wrap gap-3 items-center" do |f| %>
       <div>
@@ -34,51 +41,51 @@
     <% end %>
   </div>
 
-  <!-- Table -->
+  <!-- ✅ Table -->
   <div class="overflow-x-auto">
     <div class="flex justify-end mb-2">
       <button id="toggle-extra" type="button" class="text-sm px-3 py-1 border rounded">
         Show more columns
       </button>
     </div>
+	
 
-    <% if current_user.admin? || current_user.creator? %>
-      <%= form_with url: bulk_destroy_arrear_cases_path, method: :delete, data: { turbo_confirm: "Delete selected records?" } do %>
-    <% end %>
+	
 
     <table class="min-w-full border border-gray-200">
       <thead class="bg-gray-100">
         <tr>
-          <% if current_user.admin? || current_user.creator? %>
-            <th class="border px-3 py-2 text-left">
-              <input type="checkbox" id="select-all">
-            </th>
-          <% end %>
           <th class="border px-3 py-2 text-left">Sr No.</th>
           <th class="border px-3 py-2 text-left">Vehicle No</th>
           <th class="border px-3 py-2 text-left">Vehicle Type</th>
           <th class="border px-3 py-2 text-left">First Notice Date</th>
           <th class="border px-3 py-2 text-left">Tax Paid Status</th>
 
-          <!-- Extra columns (hidden by default) -->
+          <!-- Extra columns hidden initially -->
           <th class="border px-3 py-2 text-left extra-col hidden">Second Notice Date</th>
           <th class="border px-3 py-2 text-left extra-col hidden">Second Notice Total (₹)</th>
           <th class="border px-3 py-2 text-left extra-col hidden">Recovery Challan Date</th>
           <th class="border px-3 py-2 text-left extra-col hidden">Tax Paid Date</th>
           <th class="border px-3 py-2 text-left extra-col hidden">Tax Paid Amount (₹)</th>
+		  <th class="border px-3 py-2 text-left extra-col ">
+		  	
+			<%= button_to "Delete ALL",
+			              destroy_all_arrear_cases_path,
+			              method: :delete,
+			              data: { turbo_confirm: "⚠️ Permanently delete ALL notices?" },
+			              class: "px-4 py-2 rounded bg-red-700 hover:bg-red-800 text-white" %>
+			
+			
+		  </th>
 
           <th class="border px-3 py-2 text-left">Actions</th>
         </tr>
       </thead>
+
       <tbody>
         <% if @arrear_cases.any? %>
           <% @arrear_cases.each_with_index do |case_record, idx| %>
             <tr class="hover:bg-gray-50">
-              <% if current_user.admin? || current_user.creator? %>
-                <td class="border px-3 py-2">
-                  <%= check_box_tag "ids[]", case_record.id, false, class: "row-checkbox" %>
-                </td>
-              <% end %>
               <td class="border px-3 py-2"><%= @arrear_cases.offset_value + idx + 1 %></td>
               <td class="border px-3 py-2"><%= case_record.vehicle_number %></td>
               <td class="border px-3 py-2"><%= case_record.vehicle_type %></td>
@@ -103,14 +110,10 @@
                   <%= link_to "View", arrear_case_path(case_record), class: "text-gray-700 hover:underline" %>
                   <% if current_user.admin? || current_user.creator? %>
                     <%= link_to "Edit", edit_arrear_case_path(case_record), class: "text-blue-600 hover:underline" %>
-                    <%= button_to "Delete",
+                    <%= link_to "Delete",
                           arrear_case_path(case_record),
-                          method: :delete,
-                          data: { turbo_confirm: "Are you sure?" },
-                          form: { class: "inline-block" },
+                          data: { turbo_method: :delete, turbo_confirm: "Are you sure?" },
                           class: "text-red-600 hover:underline" %>
-                  <% else %>
-                    <span class="text-gray-400">No actions</span>
                   <% end %>
                 </div>
               </td>
@@ -127,37 +130,13 @@
       </tbody>
     </table>
 
-    <% if current_user.admin? || current_user.creator? %>
-      <div class="mt-3 flex items-center gap-3">
-        <%= submit_tag "Delete Selected",
-              class: "px-4 py-2 rounded bg-red-600 text-white disabled:opacity-50",
-              id: "bulk-delete-btn",
-              data: { disable_with: "Deleting..." },
-              disabled: true %>
-      </div>
-      <% end %>
-
-    <% if current_user.admin? || current_user.creator? %>
-      <% end %>
-  </div>
-
-  <!-- Pagination -->
-  <div class="mt-6 flex items-center justify-between text-sm text-gray-600">
-    <div>
-      <% if @arrear_cases.total_count > 0 %>
-        Showing
-        <%= @arrear_cases.offset_value + 1 %>–
-        <%= [@arrear_cases.offset_value + @arrear_cases.length, @arrear_cases.total_count].min %>
-        of <%= @arrear_cases.total_count %>
-      <% end %>
-    </div>
-    <div class="flex justify-center w-full">
+    <div class="mt-4">
       <%= paginate @arrear_cases %>
     </div>
   </div>
 </div>
 
-<!-- JS for extra columns + bulk delete -->
+<!-- ✅ Toggle extra columns -->
 <script>
   document.addEventListener("turbo:load", ready);
   document.addEventListener("DOMContentLoaded", ready);
@@ -171,24 +150,6 @@
         });
         btn.textContent = btn.textContent.includes("Show") ? "Hide more columns" : "Show more columns";
       });
-    }
-
-    const selectAll = document.getElementById("select-all");
-    const checkboxes = document.querySelectorAll(".row-checkbox");
-    const bulkBtn = document.getElementById("bulk-delete-btn");
-    if (selectAll && bulkBtn) {
-      const refreshButtonState = () => {
-        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
-        bulkBtn.disabled = !anyChecked;
-      };
-
-      selectAll.addEventListener("change", () => {
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        refreshButtonState();
-      });
-
-      checkboxes.forEach(cb => cb.addEventListener("change", refreshButtonState));
-      refreshButtonState();
     }
   }
 </script>
