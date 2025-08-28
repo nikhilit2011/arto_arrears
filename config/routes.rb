@@ -3,6 +3,8 @@ Rails.application.routes.draw do
 
   root "dashboard#index"
   get "up" => "rails/health#show", as: :rails_health_check
+  
+  get  "/reconciliation", to: "reconciliations#index"
 
   resources :arrear_cases do
     collection do
@@ -12,6 +14,7 @@ Rails.application.routes.draw do
       get  :sample_template
       delete :bulk_destroy
       delete :destroy_all 
+      
     end
   end
 
@@ -20,6 +23,8 @@ Rails.application.routes.draw do
       get  :imports
       post :imports
       get  :sample_template
+      get  :export_matched
+      get  :export
     end
   end
 

@@ -1,0 +1,60 @@
+<div class="max-w-7xl mx-auto p-6">
+  <h1 class="text-2xl font-semibold tracking-tight mb-4">Arrear vs Tax Payment — Reconciliation</h1>
+
+  <div class="mb-4 flex flex-wrap items-center gap-3">
+    <a href="<%= reconciliation_path(format: :csv) %>" class="px-3 py-2 rounded-lg shadow border">Download CSV</a>
+
+    <div class="ml-auto">
+      <%= form_with url: reconciliation_path, method: :get, local: true, class: "flex items-center gap-2" do %>
+        <label class="text-sm text-stone-600">Filter status</label>
+        <select name="status" class="border rounded px-2 py-1">
+          <option value="">All</option>
+          <% ["Pending", "Cleared", "Only Paid (No Arrear)", "No Record"].each do |s| %>
+            <option value="<%= s %>" <%= "selected" if params[:status] == s %>><%= s %></option>
+          <% end %>
+        </select>
+        <button class="px-3 py-1.5 rounded border shadow">Apply</button>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto border rounded-xl">
+    <table class="min-w-full text-sm">
+      <thead class="bg-stone-100">
+        <tr>
+          <th class="text-left px-3 py-2">#</th>
+          <th class="text-left px-3 py-2">Vehicle Number</th>
+          <th class="text-left px-3 py-2">Normalized</th>
+          <th class="text-right px-3 py-2">Arrear Total (₹)</th>
+          <th class="text-right px-3 py-2">Total Paid (₹)</th>
+          <th class="text-right px-3 py-2">Balance (₹)</th>
+          <th class="text-left px-3 py-2">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @rows.each_with_index do |r, idx| %>
+          <% row_class =
+               case r.status
+               when "Pending" then "bg-red-50"
+               when "Cleared" then "bg-green-50"
+               when "Only Paid (No Arrear)" then "bg-sky-50"
+               else ""
+               end %>
+          <tr class="<%= row_class %> border-b">
+            <td class="px-3 py-2"><%= (@rows.current_page - 1) * @rows.limit_value + idx + 1 %></td>
+            <td class="px-3 py-2 font-medium"><%= r.vehicle_number %></td>
+            <td class="px-3 py-2"><%= r.normalized_vehicle_number %></td>
+            <td class="px-3 py-2 text-right"><%= number_with_precision(r.arrear_total, precision: 2) %></td>
+            <td class="px-3 py-2 text-right"><%= number_with_precision(r.total_paid, precision: 2) %></td>
+            <td class="px-3 py-2 text-right"><%= number_with_precision(r.balance, precision: 2) %></td>
+            <td class="px-3 py-2"><%= r.status %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @rows %>
+  </div>
+</div>

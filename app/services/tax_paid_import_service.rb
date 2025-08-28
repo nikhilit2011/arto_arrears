@@ -1,125 +1,119 @@
-# frozen_string_literal: true
+# app/services/tax_paid_import_service.rb
+require "roo"
+require "digest"
+
 class TaxPaidImportService
-  require "roo"
+  def initialize(file)
+    @file = file
+  end
 
-  HEADER_MAP = {
-    vehicle: [/^registration\s*no\.?$/i, /vehicle/i, /regn/i, /registration/i],    # REQUIRED
-    date:    [/^receipt\s*date$/i, /paid.*date/i, /payment.*date/i, /\bdate\b/i],
-    amount:  [/^total.*\(rs\.\)$/i, /^total\s*in\s*\(rs\.\)$/i, /^total$/i, /amount/i],
-    ref:     [/^receipt\s*no\.?$/i, /ref/i, /challan/i, /utr/i]
-  }.freeze
-
-  POSITIVE_PARTS = {
-    tax:       [/^tax\s*in\s*\(rs\.\)$/i, /^tax$/i],
-    tax1:      [/^tax1\s*in\s*\(rs\.\)$/i, /^tax1$/i],
-    tax2:      [/^tax2\s*in\s*\(rs\.\)$/i, /^tax2$/i],
-    interest:  [/^interest\s*in\s*\(rs\.\)$/i, /^interest$/i],
-    surcharge: [/^surcharge\s*in\s*\(rs\.\)$/i, /^surcharge$/i],
-    penalty:   [/^penalty\s*in\s*\(rs\.\)$/i, /^penalty$/i],
-    adjust:    [/^tax\s*adjustment\s*in\s*\(rs\.\)$/i, /^tax\s*adjustment$/i]
-  }.freeze
-
-  NEGATIVE_PARTS = {
-    exempted: [/^exempted\s*in\s*\(rs\.\)$/i, /^exempted$/i],
-    rebate:   [/^rebate\s*in\s*\(rs\.\)$/i,   /^rebate$/i]
-  }.freeze
-
-  def initialize(file); @file = file; end
-
+  # Returns { created: Integer, matched: Integer }
   def call
-    x = open_spreadsheet(@file); s = x.sheet(0)
-    header = s.row(1).map { |h| h.to_s.strip }
-    idx = index_headers!(header)
-    parts_idx = index_parts(header)
+    x = Roo::Spreadsheet.open(@file.path)
+    sheet = x.sheet(0)
 
-    created = 0; matched = 0
+    headers = sheet.row(1).map { |h| h.to_s.strip }
+    idx = header_index_map(headers)
 
-    (2..s.last_row).each do |i|
-      row   = s.row(i)
-      raw_v = cell(row, idx[:vehicle]).to_s.strip
-      next if raw_v.blank?
+    now = Time.current
+    rows = []
 
-      norm   = normalize_vehicle(raw_v)
-      pdate  = parse_date(cell(row, idx[:date]))
-      pref   = cell(row, idx[:ref]).to_s.strip.presence
-      amount = idx[:amount] ? money(cell(row, idx[:amount])) : compute_amount_cents(row, parts_idx)
-      fname  = filename_for(@file)
+    ((sheet.first_row + 1)..sheet.last_row).each do |r|
+      row = sheet.row(r)
 
-      tp = TaxPayment.create!(
-        vehicle_number: raw_v,
-        normalized_vehicle_number: norm,
-        payment_date: pdate,
-        amount_cents: amount,
-        payment_ref: pref,
-        source_file: fname,
-        matched: false
-      )
-      created += 1
+      reg_no = pick(row, idx[:registration_no])
+      next if reg_no.to_s.strip.empty?
 
-      if (ac = ArrearCase.find_by(normalized_vehicle_number: norm))
-        ac.tax_paid_status = true
-        ac.tax_paid_amount_cents = ac.tax_paid_amount_cents.to_i + amount.to_i
-        ac.tax_paid_date = [ac.tax_paid_date, pdate].compact.max
-        ac.save!
-
-        tp.update!(matched: true)
-        matched += 1
+      vehicle_number = reg_no.to_s.strip
+      payment_date   = parse_date(pick(row, idx[:receipt_date]))
+      total_rs       = parse_money(pick(row, idx[:total_in_rs]))
+      # fallback if "Total in (Rs.)" is empty, try "Tax in (Rs.)" + "Penalty in (Rs.)"
+      if total_rs.zero?
+        tax_rs     = parse_money(pick(row, idx[:tax_in_rs]))
+        penalty_rs = parse_money(pick(row, idx[:penalty_rs]))
+        total_rs   = tax_rs + penalty_rs
       end
+
+      payment_ref = pick(row, idx[:transaction_no]).presence ||
+                    pick(row, idx[:receipt_no]).presence ||
+                    ""
+
+      h = {
+        vehicle_number:            vehicle_number,
+        normalized_vehicle_number: vehicle_number.upcase.gsub(/[^A-Z0-9]/, ""),
+        payment_date:              payment_date,
+        amount_cents:              (total_rs.round(2) * 100).to_i,
+        payment_ref:               payment_ref.to_s,
+        source_file:               @file.respond_to?(:original_filename) ? @file.original_filename.to_s : "",
+        created_at:                now,
+        updated_at:                now
+      }
+
+      # fingerprint (must match model logic, but computed here for upsert_all)
+      key = [
+        h[:normalized_vehicle_number].to_s.strip,
+        h[:payment_date].to_s,
+        h[:amount_cents].to_i.to_s,
+        h[:payment_ref].to_s.strip.upcase
+      ].join("|")
+      h[:fingerprint] = Digest::MD5.hexdigest(key)
+
+      rows << h
     end
 
-    { created: created, matched: matched }
+    rows.compact!
+    return { created: 0, matched: 0 } if rows.empty?
+
+    # Idempotent bulk write: duplicates (same fingerprint) are ignored by the unique index
+    result = TaxPayment.upsert_all(
+      rows,
+      unique_by: :index_tax_payments_on_fingerprint
+    )
+
+    # result.rows may be nil in some adapters; fall back to counting by diff in table size if needed
+    created_count = result.respond_to?(:rows) && result.rows ? result.rows.length : 0
+
+    { created: created_count, matched: 0 }
   end
 
   private
 
-  def open_spreadsheet(upload)
-    path = upload.respond_to?(:path) ? upload.path : upload.tempfile.path
-    upload.tempfile.rewind if upload.respond_to?(:tempfile) && upload.tempfile&.respond_to?(:rewind)
-    ext = File.extname(filename_for(upload)).delete(".").downcase
-    ext = "xlsx" if ext.blank?
-    Roo::Spreadsheet.open(path, extension: ext)
-  end
-
-  def filename_for(upload)
-    upload.respond_to?(:original_filename) ? upload.original_filename : File.basename(upload.path)
-  end
-
-  def index_headers!(header)
-    idx = {}
-    HEADER_MAP.each do |key, pats|
-      i = header.index { |h| pats.any? { |rx| h =~ rx } }
-      raise "Missing required Vehicle column" if key == :vehicle && i.nil?
-      idx[key] = i
-    end; idx
-  end
-
-  def index_parts(header)
+  # Map common header variants to indices
+  def header_index_map(headers)
     {
-      positives: POSITIVE_PARTS.transform_values { |pats| header.index { |h| pats.any? { |rx| h =~ rx } } },
-      negatives: NEGATIVE_PARTS.transform_values { |pats| header.index { |h| pats.any? { |rx| h =~ rx } } }
+      receipt_date:     find_idx(headers, ["Receipt Date", "Payment Date", "Date"]),
+      registration_no:  find_idx(headers, ["Registration No.", "Registration No", "Vehicle No", "Vehicle Number"]),
+      receipt_no:       find_idx(headers, ["Receipt No.", "Receipt No"]),
+      transaction_no:   find_idx(headers, ["Transaction No.", "Transaction No"]),
+      total_in_rs:      find_idx(headers, ["Total in (Rs.)", "Total in Rs.", "Total", "Total Amount (Rs.)"]),
+      tax_in_rs:        find_idx(headers, ["Tax in (Rs.)", "Tax in Rs."]),
+      penalty_rs:       find_idx(headers, ["Penalty in (Rs.)", "Penalty"])
     }
   end
 
-  def cell(row, i); i.nil? ? nil : row[i]; end
+  def find_idx(headers, candidates)
+    candidates.each do |name|
+      i = headers.index { |h| h.casecmp?(name) }
+      return i if i
+    end
+    nil
+  end
 
-  def normalize_vehicle(v); v.to_s.upcase.gsub(/[^A-Z0-9]/, ""); end
+  def pick(row, index)
+    index.nil? ? nil : row[index]
+  end
 
   def parse_date(v)
-    return nil if v.blank?
     return v if v.is_a?(Date)
     return v.to_date if v.respond_to?(:to_date) rescue nil
     Date.parse(v.to_s) rescue nil
   end
 
-  def money(v)
-    return 0 if v.nil? || (v.is_a?(String) && v.strip.empty?)
-    n = v.is_a?(Numeric) ? v.to_f : v.to_s.gsub(/[^\d\.\-]/, "").to_f
-    (n * 100).round
-  end
-
-  def compute_amount_cents(row, parts_idx)
-    pos = parts_idx[:positives].values.compact.sum { |i| money(cell(row, i)) }
-    neg = parts_idx[:negatives].values.compact.sum { |i| money(cell(row, i)) }
-    pos - neg
+  def parse_money(v)
+    return 0.0 if v.nil?
+    s = v.to_s.strip
+    s = s.gsub(/[,\s]/, "")
+    s = s.gsub(/[^\d\.]/, "") # strip stray symbols
+    s.empty? ? 0.0 : s.to_f
   end
 end

@@ -1,39 +1,100 @@
 <div class="max-w-7xl mx-auto mt-8 p-6 bg-white shadow rounded">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold">Tax Payments</h1>
-    <%= link_to "Import Excel", imports_tax_payments_path, class: "px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" %>
+    <div class="flex gap-2">
+      <%= link_to "Import Excel",
+                  imports_tax_payments_path,
+                  class: "px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" %>
+
+      <%= link_to (@grouped ? "Ungroup" : "Group by vehicle"),
+                  url_for(request.query_parameters.merge(group: (@grouped ? nil : "vehicle"), page: nil)),
+                  class: "px-4 py-2 rounded border" %>
+
+      <%= link_to "Download (as shown)",
+                  export_tax_payments_path(request.query_parameters.merge(format: :csv)),
+                  class: "px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white" %>
+    </div>
   </div>
 
   <div class="mb-4">
     <%= search_form_for @q, url: tax_payments_path, method: :get, class: "flex flex-wrap gap-3 items-center" do |f| %>
-      <%= f.text_field :vehicle_number_cont, placeholder: "Vehicle No", class: "border rounded px-3 py-2" %>
-      <%= f.select :matched_eq, [["Any",""],["Matched","true"],["Unmatched","false"]], {}, class: "border rounded px-3 py-2" %>
-      <%= f.submit "Search", class: "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" %>
+      <%= f.text_field :vehicle_number_cont,
+                       placeholder: "Vehicle No",
+                       class: "border rounded px-3 py-2" %>
+
+      <%= f.select :matched_eq,
+                   [["Any",""],["Matched","true"],["Unmatched","false"]],
+                   {},
+                   class: "border rounded px-3 py-2" %>
+
+      <%= f.hidden_field :group, value: params[:group] if params[:group].present? %>
+
+      <%= f.submit "Search",
+                   class: "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" %>
     <% end %>
   </div>
 
   <div class="overflow-x-auto">
     <table class="min-w-full border">
       <thead class="bg-gray-100">
-        <tr>
-          <th class="p-2 border text-left">Vehicle No</th>
-          <th class="p-2 border text-left">Receipt Date</th>
-          <th class="p-2 border text-right">Amount (₹)</th>
-          <th class="p-2 border text-left">Receipt No.</th>
-          <th class="p-2 border text-left">Matched?</th>
-          <th class="p-2 border text-left">File</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @tax_payments.each do |tp| %>
-          <tr class="border-t">
-            <td class="p-2 border"><%= tp.vehicle_number %></td>
-            <td class="p-2 border"><%= tp.payment_date %></td>
-            <td class="p-2 border text-right"><%= (tp.amount_cents.to_i / 100.0) %></td>
-            <td class="p-2 border"><%= tp.payment_ref %></td>
-            <td class="p-2 border"><%= tp.matched ? "Yes" : "No" %></td>
-            <td class="p-2 border"><%= tp.source_file %></td>
+        <% if @grouped %>
+          <tr>
+            <th class="p-2 border text-left">Vehicle No</th>
+            <th class="p-2 border text-left">Earliest Receipt Date</th>
+            <th class="p-2 border text-right">Total Amount (₹)</th>
+            <th class="p-2 border text-left">Any Receipt No.</th>
+            <th class="p-2 border text-left">Any Matched?</th>
+            <th class="p-2 border text-left">Tax Arrear From</th>
+            <th class="p-2 border text-right">Total Tax Due (Arrear)</th>
           </tr>
+        <% else %>
+          <tr>
+            <th class="p-2 border text-left">Vehicle No</th>
+            <th class="p-2 border text-left">Receipt Date</th>
+            <th class="p-2 border text-right">Amount (₹)</th>
+            <th class="p-2 border text-left">Receipt No.</th>
+            <th class="p-2 border text-left">Matched?</th>
+            <th class="p-2 border text-left">File</th>
+            <th class="p-2 border text-left">Tax Arrear From</th>
+            <th class="p-2 border text-right">Total Tax Due (Arrear)</th>
+          </tr>
+        <% end %>
+      </thead>
+
+      <tbody>
+        <% if @grouped %>
+          <% @tax_payments.each do |r| %>
+            <% extra = (@arrear_map || {})[r.normalized_vehicle_number] || {} %>
+            <tr class="border-t">
+              <td class="p-2 border"><%= r.vehicle_number %></td>
+              <td class="p-2 border"><%= r.earliest_payment_date %></td>
+              <td class="p-2 border text-right"><%= (r.total_amount_cents.to_i / 100.0) %></td>
+              <td class="p-2 border"><%= r.payment_ref %></td>
+              <td class="p-2 border">
+                <% if ActiveRecord::Base.connection.adapter_name.downcase.include?("postgres") %>
+                  <%= r.any_matched ? "Yes" : "No" %>
+                <% else %>
+                  <%= r.any_matched.to_i > 0 ? "Yes" : "No" %>
+                <% end %>
+              </td>
+              <td class="p-2 border"><%= extra[:tax_arrear_from] %></td>
+              <td class="p-2 border text-right"><%= extra[:total_tax_due] %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <% @tax_payments.each do |tp| %>
+            <% extra = (@arrear_map || {})[tp.normalized_vehicle_number] || {} %>
+            <tr class="border-t">
+              <td class="p-2 border"><%= tp.vehicle_number %></td>
+              <td class="p-2 border"><%= tp.payment_date %></td>
+              <td class="p-2 border text-right"><%= (tp.amount_cents.to_i / 100.0) %></td>
+              <td class="p-2 border"><%= tp.payment_ref %></td>
+              <td class="p-2 border"><%= tp.matched ? "Yes" : "No" %></td>
+              <td class="p-2 border"><%= tp.source_file %></td>
+              <td class="p-2 border"><%= extra[:tax_arrear_from] %></td>
+              <td class="p-2 border text-right"><%= extra[:total_tax_due] %></td>
+            </tr>
+          <% end %>
         <% end %>
       </tbody>
     </table>

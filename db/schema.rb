@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_08_25_181212) do
+ActiveRecord::Schema[7.1].define(version: 2025_08_28_093404) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -49,7 +49,11 @@ ActiveRecord::Schema[7.1].define(version: 2025_08_25_181212) do
     t.boolean "matched"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "fingerprint", null: false
+    t.index ["fingerprint"], name: "index_tax_payments_on_fingerprint", unique: true
     t.index ["normalized_vehicle_number"], name: "index_tax_payments_on_normalized_vehicle_number"
+    t.index ["normalized_vehicle_number"], name: "index_tax_payments_on_nvn"
+    t.index ["payment_date"], name: "index_tax_payments_on_payment_date"
   end
 
   create_table "users", force: :cascade do |t|

@@ -17,6 +17,9 @@
           <%= link_to "Home", root_path, class: "hover:underline" %>
           <%= link_to "Notices", arrear_cases_path, class: "hover:underline" %>
           <%= link_to "Tax Payments", tax_payments_path, class: "hover:underline" %>
+		  <%= link_to "Reconciliation",
+		                reconciliation_path,
+		                class: "hover:underline" %>
         </div>
         <div class="flex items-center">
           <span class="mr-4">Signed in as <%= current_user.email %></span>
