@@ -97,6 +97,17 @@ class ArrearCasesController < ApplicationController
 
     send_data csv, filename: "arrear_cases-#{Date.today}.csv", type: "text/csv"
   end
+  
+  def bulk_destroy
+      ids = Array(params[:ids] || params[:arrear_case_ids]).map(&:to_i).uniq
+      if ids.empty?
+        redirect_to arrear_cases_path, alert: "No records selected."
+      else
+        destroyed = ArrearCase.where(id: ids).destroy_all.length
+        redirect_to arrear_cases_path,
+          notice: "#{destroyed} record#{'s' unless destroyed == 1} deleted successfully."
+      end
+    end
 
   private
 

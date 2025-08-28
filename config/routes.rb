@@ -10,6 +10,7 @@ Rails.application.routes.draw do
       post :imports
       get  :export
       get  :sample_template
+      delete :bulk_destroy
     end
   end
 
